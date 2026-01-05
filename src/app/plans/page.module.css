@@ -7,3 +7,24 @@
     border: 1px solid var(--primary);
     box-shadow: 0 0 30px rgba(139, 92, 246, 0.2);
 }
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 6rem 2rem;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    /* Force 3 columns side-by-side */
+    gap: 2rem;
+    align-items: stretch;
+}
+
+/* Response down to mobile */
+@media (max-width: 900px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
