@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google"; // Using Inter from Google Fonts
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
-
 export const metadata: Metadata = {
-  title: "Omega TV | Stream Without Limits",
-  description: "Experience premium streaming with Omega TV. Join today for unlimited entertainment.",
+  title: "Omega TV | Premium Streaming",
+  description: "Stream unlimited entertainment with Omega TV. Live TV, movies, and shows on any device.",
 };
 
 export default function RootLayout({
@@ -16,7 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }
