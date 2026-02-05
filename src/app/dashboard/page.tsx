@@ -45,6 +45,7 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
+    router.refresh() // Clear Next.js cache
     router.push('/')
   }
 
