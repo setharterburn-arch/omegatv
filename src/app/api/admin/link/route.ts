@@ -41,6 +41,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Fetch real expiry from IPTV panel
+    let expiresAt = null;
+    try {
+      const AUTOMATION_URL = process.env.AUTOMATION_URL || 'http://149.56.97.159:3007';
+      const lookupRes = await fetch(`${AUTOMATION_URL}/api/lookup/${encodeURIComponent(iptvUsername)}`, {
+        signal: AbortSignal.timeout(10000),
+      });
+      if (lookupRes.ok) {
+        const panelData = await lookupRes.json();
+        if (panelData.expireTimestamp) {
+          expiresAt = new Date(panelData.expireTimestamp * 1000).toISOString();
+        }
+      }
+    } catch (err) {
+      console.error('Panel lookup failed:', err);
+    }
+
     // Check if subscription already exists
     const { data: existing } = await adminSupabase
       .from('user_subscriptions')
@@ -56,6 +73,7 @@ export async function POST(req: NextRequest) {
           iptv_username: iptvUsername,
           iptv_password: iptvPassword || null,
           status: 'active',
+          expires_at: expiresAt || undefined,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
@@ -68,6 +86,7 @@ export async function POST(req: NextRequest) {
           iptv_username: iptvUsername,
           iptv_password: iptvPassword || null,
           status: 'active',
+          expires_at: expiresAt,
           plan_name: '1 Month',
           price_cents: 2500,
         });

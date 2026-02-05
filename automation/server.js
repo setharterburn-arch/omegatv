@@ -36,9 +36,179 @@ function generatePassword(length = 10) {
   return password;
 }
 
+// ---- IPTV Panel API Session ----
+const https = require('https');
+const PANEL_URL = process.env.IPTV_PANEL_URL || 'https://bqque-xizq3ykhpv.mobazzz.com';
+const PANEL_USER = process.env.IPTV_PANEL_USER || 'arterburn';
+const PANEL_PASS = process.env.IPTV_PANEL_PASS || 'Sb0l7rjjlbn6wAn';
+
+let panelCookies = null;
+let panelCsrf = null;
+let panelSessionTime = 0;
+
+async function panelLogin() {
+  const now = Date.now();
+  // Reuse session if < 10 minutes old
+  if (panelCookies && panelCsrf && (now - panelSessionTime) < 600000) {
+    return { cookies: panelCookies, csrf: panelCsrf };
+  }
+
+  // Step 1: GET login page
+  const loginPage = await fetch(PANEL_URL, {
+    redirect: 'manual',
+    headers: { 'User-Agent': 'Mozilla/5.0' },
+  });
+  const loginHtml = await loginPage.text();
+  const setCookies = loginPage.headers.getSetCookie ? loginPage.headers.getSetCookie() : [];
+  
+  // Extract cookies
+  const cookieJar = {};
+  for (const sc of setCookies) {
+    const [nameVal] = sc.split(';');
+    const [name, ...valParts] = nameVal.split('=');
+    cookieJar[name.trim()] = valParts.join('=');
+  }
+
+  // Extract CSRF token
+  const csrfMatch = loginHtml.match(/name="_token"\s+value="([^"]+)"/);
+  if (!csrfMatch) throw new Error('Could not find CSRF token');
+  const csrf = csrfMatch[1];
+
+  // Step 2: POST login
+  const cookieHeader = Object.entries(cookieJar).map(([k, v]) => `${k}=${v}`).join('; ');
+  const loginRes = await fetch(PANEL_URL, {
+    method: 'POST',
+    redirect: 'manual',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Cookie': cookieHeader,
+      'Referer': PANEL_URL,
+      'User-Agent': 'Mozilla/5.0',
+    },
+    body: `_token=${csrf}&username=${PANEL_USER}&password=${PANEL_PASS}`,
+  });
+
+  // Collect session cookies from redirect
+  const postCookies = loginRes.headers.getSetCookie ? loginRes.headers.getSetCookie() : [];
+  for (const sc of postCookies) {
+    const [nameVal] = sc.split(';');
+    const [name, ...valParts] = nameVal.split('=');
+    cookieJar[name.trim()] = valParts.join('=');
+  }
+
+  panelCookies = Object.entries(cookieJar).map(([k, v]) => `${k}=${v}`).join('; ');
+  panelSessionTime = now;
+
+  // Step 3: GET lines page to extract CSRF (needed for lines/data requests)
+  const linesRes = await fetch(`${PANEL_URL}/lines`, {
+    headers: { 'Cookie': panelCookies, 'User-Agent': 'Mozilla/5.0' },
+  });
+  const linesHtml = await linesRes.text();
+  const linesCsrf = linesHtml.match(/csrf-token.*?content="([^"]+)"/);
+  panelCsrf = linesCsrf ? linesCsrf[1] : csrf;
+
+  // Update cookies from lines page
+  const linesSetCookies = linesRes.headers.getSetCookie ? linesRes.headers.getSetCookie() : [];
+  for (const sc of linesSetCookies) {
+    const [nameVal] = sc.split(';');
+    const [name, ...valParts] = nameVal.split('=');
+    cookieJar[name.trim()] = valParts.join('=');
+  }
+  panelCookies = Object.entries(cookieJar).map(([k, v]) => `${k}=${v}`).join('; ');
+
+  console.log('[PANEL] Logged in successfully');
+  return { cookies: panelCookies, csrf: panelCsrf };
+}
+
+async function panelLookup(username) {
+  const { cookies, csrf } = await panelLogin();
+
+  const res = await fetch(`${PANEL_URL}/lines/data`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Cookie': cookies,
+      'X-CSRF-TOKEN': csrf,
+      'X-Requested-With': 'XMLHttpRequest',
+      'User-Agent': 'Mozilla/5.0',
+    },
+    body: [
+      'draw=1&start=0&length=10',
+      'id=users&filter=&reseller=',
+      `search[value]=${encodeURIComponent(username)}`,
+      'order[0][column]=0&order[0][dir]=desc',
+      'columns[0][data]=id&columns[0][name]=id',
+      'columns[1][data]=expired&columns[1][name]=username',
+      'columns[2][data]=password&columns[2][name]=password',
+      'columns[3][data]=exp_date_show&columns[3][name]=users.exp_date',
+      'columns[4][data]=admin_notes_show&columns[4][name]=reseller_notes',
+    ].join('&'),
+  });
+
+  const data = await res.json();
+  const lines = data.data || [];
+
+  // Find exact username match
+  const match = lines.find(l => l.username.toLowerCase() === username.toLowerCase());
+  if (!match) return null;
+
+  return {
+    id: match.id,
+    username: match.username,
+    password: match.password,
+    expireDate: match.exp_date,
+    expireTimestamp: match.expire_date,
+    enabled: match.enabled === 1,
+    connections: `${match.active_connections}/${match.user_connection}`,
+    notes: match.reseller_notes,
+    owner: match.owner,
+  };
+}
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Lookup IPTV user by username
+app.get('/api/lookup/:username', async (req, res) => {
+  try {
+    const result = await panelLookup(req.params.username);
+    if (!result) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(result);
+  } catch (err) {
+    console.error('[LOOKUP] Error:', err.message);
+    // Reset session on auth errors
+    panelCookies = null;
+    panelCsrf = null;
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Bulk lookup for admin panel sync
+app.post('/api/lookup-bulk', async (req, res) => {
+  try {
+    const { usernames } = req.body;
+    if (!usernames || !Array.isArray(usernames)) {
+      return res.status(400).json({ error: 'Provide usernames array' });
+    }
+
+    const results = {};
+    for (const username of usernames) {
+      try {
+        results[username] = await panelLookup(username);
+      } catch (err) {
+        results[username] = { error: err.message };
+      }
+    }
+    res.json(results);
+  } catch (err) {
+    console.error('[BULK-LOOKUP] Error:', err.message);
+    panelCookies = null;
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Create new IPTV account

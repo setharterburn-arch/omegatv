@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabase, adminSupabase } from '@/lib/supabase-server'
 
+const AUTOMATION_URL = process.env.AUTOMATION_URL || 'http://149.56.97.159:3007'
+
+async function fetchPanelExpiry(iptvUsername: string): Promise<{ expDate: string | null; expTimestamp: number | null }> {
+  try {
+    const res = await fetch(`${AUTOMATION_URL}/api/lookup/${encodeURIComponent(iptvUsername)}`, {
+      signal: AbortSignal.timeout(10000),
+    })
+    if (!res.ok) return { expDate: null, expTimestamp: null }
+    const data = await res.json()
+    return {
+      expDate: data.expireDate || null,    // "05-10-2026 13:19"
+      expTimestamp: data.expireTimestamp || null,  // Unix timestamp
+    }
+  } catch {
+    return { expDate: null, expTimestamp: null }
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const userId = request.nextUrl.searchParams.get('userId')
@@ -44,8 +62,26 @@ export async function GET(request: NextRequest) {
       })
     }
     
-    // Calculate days remaining
-    const expiryDate = subscription.expires_at ? new Date(subscription.expires_at) : null
+    // Fetch real expiry from IPTV panel
+    let expiryDate = subscription.expires_at ? new Date(subscription.expires_at) : null
+    const panelData = subscription.iptv_username 
+      ? await fetchPanelExpiry(subscription.iptv_username)
+      : { expDate: null, expTimestamp: null }
+    
+    // Use panel expiry if available (it's the source of truth)
+    if (panelData.expTimestamp) {
+      expiryDate = new Date(panelData.expTimestamp * 1000)
+      
+      // Sync back to database if different
+      const dbExpiry = subscription.expires_at ? new Date(subscription.expires_at).getTime() : 0
+      if (Math.abs(expiryDate.getTime() - dbExpiry) > 86400000) { // >1 day difference
+        await adminSupabase
+          .from('user_subscriptions')
+          .update({ expires_at: expiryDate.toISOString() })
+          .eq('id', subscription.id)
+      }
+    }
+
     const now = new Date()
     const daysRemaining = expiryDate 
       ? Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
@@ -70,7 +106,7 @@ export async function GET(request: NextRequest) {
         plan_name: subscription.plan_name,
         price_cents: subscription.price_cents,
         status: subscription.status,
-        expires_at: subscription.expires_at,
+        expires_at: expiryDate ? expiryDate.toISOString() : subscription.expires_at,
         auto_renew: subscription.auto_renew,
       }
     })
