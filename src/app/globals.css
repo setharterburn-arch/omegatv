@@ -218,35 +218,4 @@ textarea::placeholder,
   color: var(--grey-600);
 }
 
-/* Legacy support - redirect old purple styles */
-.bg-gradient-to-br,
-.from-slate-900,
-.via-purple-900,
-.to-slate-900,
-.bg-zinc-950,
-.bg-slate-950 {
-  background: #fff !important;
-}
-
-.text-white {
-  color: #000;
-}
-
-.text-white\/60,
-.text-white\/70,
-.text-zinc-400,
-.text-zinc-500 {
-  color: var(--grey-500);
-}
-
-.border-zinc-800,
-.border-white\/10 {
-  border-color: var(--grey-200);
-}
-
-/* Override old card styles for dark pages */
-.bg-zinc-900,
-.bg-zinc-800,
-.bg-slate-900\/80 {
-  background: #fff !important;
-}
+/* Note: Legacy dark mode classes removed - all pages should use explicit colors */
