@@ -110,29 +110,22 @@ export default function RenewPage() {
 
     try {
       // Tokenize card via BlockChyp iframe
-      let token: string;
-      
-      if (tokenizerRef.current) {
-        const tokenResult = await new Promise<any>((resolve, reject) => {
-          tokenizerRef.current.tokenize(
-            process.env.NEXT_PUBLIC_BLOCKCHYP_TOKENIZING_KEY || '',
-            (result: any) => {
-              if (result.error) {
-                reject(new Error(result.error));
-              } else {
-                resolve(result);
-              }
-            }
-          );
-        });
-        token = tokenResult.token;
-      } else {
+      if (!tokenizerRef.current) {
         throw new Error('Payment system not loaded. Please refresh and try again.');
       }
 
-      if (!token) {
-        throw new Error('Failed to process card. Please check your details and try again.');
+      const tokenEvent = await tokenizerRef.current.tokenize(
+        process.env.NEXT_PUBLIC_BLOCKCHYP_TOKENIZING_KEY || '',
+        { test: false }
+      );
+
+      const tokenData = tokenEvent?.data || tokenEvent;
+
+      if (!tokenData?.success && !tokenData?.token) {
+        throw new Error(tokenData?.responseDescription || tokenData?.error || 'Failed to process card. Please check your details and try again.');
       }
+
+      const token = tokenData.token;
 
       // Send token to server for charging
       const paymentRes = await fetch('/api/payment/process', {
