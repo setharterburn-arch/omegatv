@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Logo } from '@/components/Logo';
 
 interface Subscription {
   id: string;
@@ -34,7 +36,7 @@ export default function RenewPage() {
   const [isNewCustomer, setIsNewCustomer] = useState(false);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<Plan>(PLANS[0]);
+  const [selectedPlan, setSelectedPlan] = useState<Plan>(PLANS[1]); // Default to 6 months
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
@@ -154,8 +156,8 @@ export default function RenewPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-black to-purple-950 flex items-center justify-center">
-        <div className="text-white text-xl">Loading...</div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-gray-500">Loading...</div>
       </div>
     );
   }
@@ -165,25 +167,41 @@ export default function RenewPage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black to-purple-950 p-4">
-      <div className="max-w-md mx-auto pt-12">
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <header className="border-b border-gray-200 px-6 py-4">
+        <div className="max-w-md mx-auto flex items-center justify-between">
+          <Link href="/dashboard" className="text-gray-500 hover:text-black text-sm font-medium transition-colors">
+            ← Back
+          </Link>
+          <Link href="/" className="flex items-center gap-2">
+            <Logo className="w-6 h-6" />
+            <span className="font-bold text-sm tracking-tight">OMEGA TV</span>
+          </Link>
+        </div>
+      </header>
+
+      <div className="max-w-md mx-auto px-6 py-12">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">
-            {isNewCustomer ? 'Get Started' : 'Renew Subscription'}
+          <h1 className="text-3xl font-bold tracking-tight mb-2">
+            {isNewCustomer ? 'GET STARTED' : 'RENEW'}
           </h1>
-          <p className="text-gray-400">
+          <p className="text-gray-500">
             {isNewCustomer 
-              ? 'Subscribe to Omega TV and start streaming' 
+              ? 'Subscribe to Omega TV' 
               : 'Keep watching without interruption'}
           </p>
         </div>
 
         {!isNewCustomer && subscription && (
-          <div className="bg-black/50 backdrop-blur-xl rounded-2xl p-4 mb-6 border border-purple-500/30">
+          <div className="border border-gray-200 p-4 mb-6">
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-white font-semibold">@{subscription.iptv_username}</p>
-                <p className={`text-sm ${daysUntilExpiry && daysUntilExpiry <= 3 ? 'text-red-400' : daysUntilExpiry && daysUntilExpiry <= 7 ? 'text-yellow-400' : 'text-green-400'}`}>
+                <p className="font-semibold">@{subscription.iptv_username}</p>
+                <p className={`text-sm ${
+                  daysUntilExpiry && daysUntilExpiry <= 3 ? 'text-red-600' : 
+                  daysUntilExpiry && daysUntilExpiry <= 7 ? 'text-yellow-600' : 'text-green-600'
+                }`}>
                   {daysUntilExpiry !== null 
                     ? daysUntilExpiry > 0 
                       ? `Expires in ${daysUntilExpiry} days`
@@ -195,32 +213,33 @@ export default function RenewPage() {
           </div>
         )}
 
+        {/* Plan Selection */}
         <div className="mb-6">
-          <h3 className="text-white font-semibold mb-3">Select Plan</h3>
+          <h3 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-3">Select Plan</h3>
           <div className="space-y-3">
             {PLANS.map((plan) => (
               <button
                 key={plan.id}
                 onClick={() => setSelectedPlan(plan)}
-                className={`w-full p-4 rounded-xl border transition-all text-left ${
+                className={`w-full p-4 border text-left transition-all ${
                   selectedPlan.id === plan.id
-                    ? 'border-purple-500 bg-purple-500/20'
-                    : 'border-gray-700 bg-black/30 hover:border-gray-600'
+                    ? 'border-black bg-gray-50'
+                    : 'border-gray-200 hover:border-gray-400'
                 }`}
               >
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-white font-semibold">{plan.name}</p>
-                    <p className="text-gray-400 text-sm">{plan.connections} Connections</p>
+                    <p className="font-semibold">{plan.name}</p>
+                    <p className="text-gray-500 text-sm">{plan.connections} Connections</p>
                     {plan.savings && (
-                      <p className="text-green-400 text-sm">{plan.savings}</p>
+                      <p className="text-green-600 text-sm font-medium">{plan.savings}</p>
                     )}
                   </div>
                   <div className="text-right">
-                    <p className="text-white font-bold text-xl">${(plan.price_cents / 100).toFixed(2)}</p>
+                    <p className="font-bold text-xl">${(plan.price_cents / 100).toFixed(0)}</p>
                     {plan.months > 1 && (
                       <p className="text-gray-400 text-sm">
-                        ${(plan.price_cents / 100 / plan.months).toFixed(2)}/mo
+                        ${(plan.price_cents / 100 / plan.months).toFixed(0)}/mo
                       </p>
                     )}
                   </div>
@@ -230,57 +249,46 @@ export default function RenewPage() {
           </div>
         </div>
 
-        {isNewCustomer && (
-          <div className="bg-black/30 rounded-xl p-4 mb-6 border border-purple-500/20">
-            <p className="text-gray-300 text-sm font-semibold mb-2">What you get:</p>
-            <ul className="text-sm text-gray-400 space-y-1">
-              <li>✓ 10,000+ Live TV Channels</li>
-              <li>✓ Movies & TV Shows on Demand</li>
-              <li>✓ Works on all devices</li>
-              <li>✓ 3 Simultaneous Connections</li>
-            </ul>
-          </div>
-        )}
-
-        <form onSubmit={handlePayment} className="bg-black/50 backdrop-blur-xl rounded-2xl p-6 border border-purple-500/30">
-          <h3 className="text-white font-semibold mb-4">Payment Details</h3>
+        {/* Payment Form */}
+        <form onSubmit={handlePayment} className="border border-gray-200 p-6">
+          <h3 className="font-bold text-sm uppercase tracking-wide text-gray-500 mb-4">Payment Details</h3>
           
           <div className="space-y-4">
             <div>
-              <label className="block text-gray-400 text-sm mb-1">Card Number</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
               <input
                 type="text"
                 value={cardNumber}
                 onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
                 placeholder="1234 5678 9012 3456"
                 maxLength={19}
-                className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                className="w-full"
                 required
               />
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-gray-400 text-sm mb-1">Expiry</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Expiry</label>
                 <input
                   type="text"
                   value={expiry}
                   onChange={(e) => setExpiry(formatExpiry(e.target.value))}
                   placeholder="MM/YY"
                   maxLength={5}
-                  className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                  className="w-full"
                   required
                 />
               </div>
               <div>
-                <label className="block text-gray-400 text-sm mb-1">CVV</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">CVV</label>
                 <input
                   type="text"
                   value={cvv}
                   onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
                   placeholder="123"
                   maxLength={4}
-                  className="w-full bg-black/50 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                  className="w-full"
                   required
                 />
               </div>
@@ -291,20 +299,20 @@ export default function RenewPage() {
                 type="checkbox"
                 checked={saveCard}
                 onChange={(e) => setSaveCard(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-700 bg-black/50 text-purple-600 focus:ring-purple-500"
+                className="w-4 h-4"
               />
-              <span className="text-gray-400 text-sm">Save card for auto-renewal</span>
+              <span className="text-gray-600 text-sm">Save card for auto-renewal</span>
             </label>
           </div>
 
           {error && (
-            <div className="mt-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm">
               {error}
             </div>
           )}
 
           {message && (
-            <div className="mt-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-green-400 text-sm">
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 text-green-600 text-sm">
               {message}
             </div>
           )}
@@ -312,24 +320,17 @@ export default function RenewPage() {
           <button
             type="submit"
             disabled={processing}
-            className="w-full mt-6 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-4 rounded-xl font-bold text-lg transition-all"
+            className="w-full mt-6 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {processing 
               ? 'Processing...' 
-              : `${isNewCustomer ? 'Subscribe' : 'Renew'} - $${(selectedPlan.price_cents / 100).toFixed(2)}`}
+              : `${isNewCustomer ? 'Subscribe' : 'Renew'} — $${(selectedPlan.price_cents / 100).toFixed(0)}`}
           </button>
 
-          <p className="text-center text-gray-500 text-xs mt-4">
+          <p className="text-center text-gray-400 text-xs mt-4">
             Secured by BlockChyp • PCI Compliant
           </p>
         </form>
-
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="w-full mt-4 text-gray-400 hover:text-white py-3 transition-colors"
-        >
-          ← Back to Dashboard
-        </button>
       </div>
     </div>
   );

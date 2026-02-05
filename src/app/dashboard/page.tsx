@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LogOut, Calendar, CreditCard, AlertCircle, CheckCircle } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 import { createClient } from '@/lib/supabase'
 
@@ -13,7 +12,6 @@ interface SubscriptionData {
   expiryDate?: string
   daysRemaining?: number
   planName?: string
-  panelId?: string
 }
 
 export default function DashboardPage() {
@@ -25,13 +23,11 @@ export default function DashboardPage() {
   useEffect(() => {
     const supabase = createClient()
     
-    // Check auth
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) {
         router.push('/login')
       } else {
         setUser(user)
-        // Fetch subscription data
         fetchSubscription()
       }
     })
@@ -57,8 +53,8 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-white/60">Loading...</div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-gray-500">Loading...</div>
       </div>
     )
   }
@@ -66,45 +62,48 @@ export default function DashboardPage() {
   const userName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Customer'
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="bg-slate-900/80 backdrop-blur-md border-b border-white/10">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Logo className="w-10 h-10" />
-            <span className="text-xl font-bold text-white">Omega TV</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-white/70">Hi, {userName}</span>
-            <button onClick={handleLogout} className="text-white/60 hover:text-white transition-colors">
-              <LogOut className="w-5 h-5" />
+      <header className="border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            <Logo className="w-8 h-8" />
+            <span className="text-lg font-bold tracking-tight">OMEGA TV</span>
+          </Link>
+          <div className="flex items-center gap-6">
+            <span className="text-gray-500 text-sm">Hi, {userName}</span>
+            <button 
+              onClick={handleLogout} 
+              className="text-gray-400 hover:text-black text-sm font-medium transition-colors"
+            >
+              Logout
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-6 py-12">
-        <h1 className="text-3xl font-bold text-white mb-8">My Subscription</h1>
+      {/* Main */}
+      <main className="max-w-3xl mx-auto px-6 py-12">
+        <h1 className="text-3xl font-bold mb-8 tracking-tight">MY SUBSCRIPTION</h1>
 
-        {/* Subscription Card */}
-        <div className="card p-8 mb-8">
+        {/* Status Card */}
+        <div className="border border-gray-200 p-8 mb-8">
           {subscription?.status === 'unlinked' || subscription?.status === 'pending' ? (
             <div className="text-center py-8">
-              <CreditCard className="w-16 h-16 mx-auto text-purple-400 mb-4" />
-              <h2 className="text-xl font-semibold text-white mb-2">
-                {subscription?.status === 'pending' ? 'Account Pending' : 'Get Started'}
+              <div className="text-5xl mb-4">📺</div>
+              <h2 className="text-xl font-bold mb-2">
+                {subscription?.status === 'pending' ? 'ACCOUNT PENDING' : 'GET STARTED'}
               </h2>
-              <p className="text-white/60 mb-6">
+              <p className="text-gray-500 mb-6">
                 {subscription?.status === 'pending' 
-                  ? 'Your account is being set up. If you haven\'t paid yet, subscribe below.'
+                  ? 'Your account is being set up. Subscribe below if you haven\'t paid yet.'
                   : 'Subscribe to Omega TV to start streaming.'}
               </p>
               <Link href="/renew" className="btn-primary inline-block">
                 Subscribe Now
               </Link>
               <div className="mt-4">
-                <Link href="/support" className="text-white/40 hover:text-white/60 text-sm transition-colors">
+                <Link href="/support" className="text-gray-400 hover:text-black text-sm transition-colors">
                   Need help? Contact Support
                 </Link>
               </div>
@@ -112,28 +111,22 @@ export default function DashboardPage() {
           ) : (
             <>
               {/* Status Banner */}
-              <div className={`flex items-center gap-3 p-4 rounded-xl mb-6 ${
+              <div className={`flex items-center gap-3 p-4 mb-6 ${
                 subscription?.status === 'active' 
-                  ? 'bg-emerald-500/20 border border-emerald-500/30'
-                  : subscription?.status === 'expired'
-                  ? 'bg-red-500/20 border border-red-500/30'
-                  : 'bg-amber-500/20 border border-amber-500/30'
+                  ? 'bg-green-50 border border-green-200'
+                  : 'bg-red-50 border border-red-200'
               }`}>
-                {subscription?.status === 'active' ? (
-                  <CheckCircle className="w-6 h-6 text-emerald-400" />
-                ) : (
-                  <AlertCircle className="w-6 h-6 text-amber-400" />
-                )}
+                <span className="text-2xl">
+                  {subscription?.status === 'active' ? '✓' : '⚠'}
+                </span>
                 <div>
                   <p className={`font-semibold ${
-                    subscription?.status === 'active' ? 'text-emerald-300' : 
-                    subscription?.status === 'expired' ? 'text-red-300' : 'text-amber-300'
+                    subscription?.status === 'active' ? 'text-green-700' : 'text-red-700'
                   }`}>
-                    {subscription?.status === 'active' ? 'Active Subscription' :
-                     subscription?.status === 'expired' ? 'Subscription Expired' : 'Pending'}
+                    {subscription?.status === 'active' ? 'Active Subscription' : 'Subscription Expired'}
                   </p>
                   {subscription?.daysRemaining !== undefined && (
-                    <p className="text-sm text-white/60">
+                    <p className="text-sm text-gray-500">
                       {subscription.daysRemaining > 0 
                         ? `${subscription.daysRemaining} days remaining`
                         : 'Expired'}
@@ -144,48 +137,42 @@ export default function DashboardPage() {
 
               {/* Details */}
               <div className="grid md:grid-cols-2 gap-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                    <Logo className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-white/60">Username</p>
-                    <p className="text-white font-semibold">{subscription?.username || 'N/A'}</p>
-                  </div>
+                <div>
+                  <p className="text-sm text-gray-400 uppercase tracking-wide mb-1">Username</p>
+                  <p className="text-lg font-semibold">{subscription?.username || 'N/A'}</p>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-white/60">Expires</p>
-                    <p className="text-white font-semibold">{subscription?.expiryDate || 'N/A'}</p>
-                  </div>
+                <div>
+                  <p className="text-sm text-gray-400 uppercase tracking-wide mb-1">Expires</p>
+                  <p className="text-lg font-semibold">{subscription?.expiryDate || 'N/A'}</p>
                 </div>
               </div>
 
               {/* Renew Button */}
-              {subscription?.status !== 'active' || (subscription?.daysRemaining && subscription.daysRemaining < 7) ? (
-                <div className="mt-8 pt-6 border-t border-white/10">
-                  <Link href="/renew" className="btn-primary inline-flex items-center gap-2">
-                    <CreditCard className="w-5 h-5" />
+              {(subscription?.status !== 'active' || (subscription?.daysRemaining && subscription.daysRemaining < 7)) && (
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <Link href="/renew" className="btn-primary inline-block">
                     Renew Subscription
                   </Link>
                 </div>
-              ) : null}
+              )}
             </>
           )}
         </div>
 
         {/* Quick Links */}
         <div className="grid md:grid-cols-2 gap-4">
-          <Link href="/support" className="card p-6 hover:bg-white/10 transition-colors cursor-pointer">
-            <h3 className="font-semibold text-white mb-2">💬 Need Help?</h3>
-            <p className="text-white/60 text-sm">Chat with our support bot or submit a request.</p>
+          <Link href="/support" className="border border-gray-200 p-6 hover:border-gray-400 transition-colors">
+            <h3 className="font-bold mb-2">💬 NEED HELP?</h3>
+            <p className="text-gray-500 text-sm">Chat with support or submit a request.</p>
           </Link>
-          <a href="https://www.youtube.com/@OmegaTV-IPTV" target="_blank" rel="noopener noreferrer" className="card p-6 hover:bg-white/10 transition-colors cursor-pointer">
-            <h3 className="font-semibold text-white mb-2">📺 Setup Guide</h3>
-            <p className="text-white/60 text-sm">Watch video tutorials for setting up your devices.</p>
+          <a 
+            href="https://www.youtube.com/@OmegaTV-IPTV" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="border border-gray-200 p-6 hover:border-gray-400 transition-colors"
+          >
+            <h3 className="font-bold mb-2">📺 SETUP GUIDE</h3>
+            <p className="text-gray-500 text-sm">Watch video tutorials for your devices.</p>
           </a>
         </div>
       </main>
