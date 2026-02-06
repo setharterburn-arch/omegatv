@@ -63,20 +63,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing card details' }, { status: 400 });
     }
 
-    let amountCents = providedAmount || 2000;
+    // Always use frontend-provided amount (what user selected)
+    // Only fall back to DB or default if not provided
+    let amountCents = providedAmount;
     let planName = providedPlanName || '1 Month';
 
-    if (subscriptionId) {
-      const { data } = await adminSupabase
-        .from('user_subscriptions')
-        .select('*')
-        .eq('id', subscriptionId)
-        .single();
-      
-      if (data) {
-        amountCents = data.price_cents || amountCents;
-        planName = data.plan_name || planName;
-      }
+    // Validate amount is one of our valid plans
+    const validAmounts = [2000, 9000, 15000]; // $20, $90, $150
+    if (!amountCents || !validAmounts.includes(amountCents)) {
+      console.error('Invalid amount received:', amountCents);
+      return NextResponse.json({ error: 'Invalid plan selected' }, { status: 400 });
     }
 
     const [expMonth, expYear] = expiry.split('/');
