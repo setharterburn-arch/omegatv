@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
     // Get user details
     const customerName = user.user_metadata?.name || user.email?.split('@')[0] || 'customer';
     const customerEmail = user.email || '';
+    const customerPhone = user.user_metadata?.phone || user.phone || '';
 
     console.log(`[CREATE] Creating IPTV account for ${customerName}`);
 
@@ -65,9 +66,10 @@ export async function POST(req: NextRequest) {
       console.error('[CREATE] Automation failed:', errorData);
       
       // Mark for manual creation
+      const phoneInfo = customerPhone ? `\nPhone: ${customerPhone}` : '';
       await sendPushover(
         '⚠️ Omega TV: Manual Creation Needed',
-        `Failed to auto-create account for:\n${customerName}\n${customerEmail}\n\nPayment ID: ${paymentId}`,
+        `Failed to auto-create account for:\n${customerName}\n${customerEmail}${phoneInfo}\n\nPayment ID: ${paymentId}`,
         1
       );
       
@@ -117,9 +119,10 @@ export async function POST(req: NextRequest) {
       .eq('user_id', user.id);
 
     // Send success notification
+    const phoneDisplay = customerPhone ? `\nPhone: ${customerPhone}` : '';
     await sendPushover(
       '🆕 Omega TV: Account Created',
-      `${customerName}\nUsername: ${createResult.username}\nExpires: ${expiresAt.toLocaleDateString()}`,
+      `${customerName}${phoneDisplay}\nUsername: ${createResult.username}\nExpires: ${expiresAt.toLocaleDateString()}`,
       -1
     );
 

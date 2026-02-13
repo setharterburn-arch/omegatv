@@ -136,9 +136,11 @@ export async function POST(req: NextRequest) {
     // Notify Seth
     const userEmail = user.email || 'unknown';
     const userName = user.user_metadata?.name || userEmail;
+    const userPhone = user.user_metadata?.phone || user.phone || '';
+    const phoneDisplay = userPhone ? `\nPhone: ${userPhone}` : '';
     await sendPushover(
       '💰 Omega TV: Payment Received',
-      `${userName} (${userEmail})\nPlan: ${planName}\nAmount: $${(amountCents / 100).toFixed(2)}\nTx: ${result.transactionId}\n\nGo link their IPTV account in admin panel.`,
+      `${userName} (${userEmail})${phoneDisplay}\nPlan: ${planName}\nAmount: $${(amountCents / 100).toFixed(2)}\nTx: ${result.transactionId}\n\nGo link their IPTV account in admin panel.`,
       1
     );
 

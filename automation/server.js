@@ -400,11 +400,34 @@ app.post('/api/create', async (req, res) => {
     // Take screenshot for debugging
     await page.screenshot({ path: `/tmp/create-success-${Date.now()}.png` });
 
+    // Send credentials email via omega-support
+    let emailSent = false;
+    if (customerEmail) {
+      try {
+        const emailRes = await fetch('http://localhost:5002/api/send-credentials', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: customerEmail,
+            username,
+            password,
+            plan: `${planMonths} Month`,
+          }),
+        });
+        const emailResult = await emailRes.json();
+        emailSent = emailResult.success;
+        console.log(`[CREATE] Email ${emailSent ? 'sent' : 'failed'} to ${customerEmail}`);
+      } catch (emailErr) {
+        console.error('[CREATE] Email send error:', emailErr.message);
+      }
+    }
+
     res.json({
       success: true,
       username,
       password,
       expiresIn: `${planMonths} month(s)`,
+      emailSent,
     });
 
   } catch (error) {
