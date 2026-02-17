@@ -37,14 +37,27 @@ interface Subscription {
   created_at: string;
 }
 
+interface Payment {
+  id: string;
+  user_id: string;
+  amount_cents: number;
+  status: string;
+  blockchyp_transaction_id: string;
+  created_at: string;
+  user_email: string;
+  user_name: string;
+  user_phone: string;
+}
+
 export default function AdminPage() {
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('support');
+  const [activeTab, setActiveTab] = useState('payments');
   
   const [supportRequests, setSupportRequests] = useState<SupportRequest[]>([]);
   const [pendingMatches, setPendingMatches] = useState<PendingMatch[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   
   const [expandedRequest, setExpandedRequest] = useState<string | null>(null);
   const [linkModal, setLinkModal] = useState<{ userId: string; email: string } | null>(null);
@@ -74,6 +87,7 @@ export default function AdminPage() {
       setSupportRequests(data.supportRequests || []);
       setPendingMatches(data.pendingMatches || []);
       setSubscriptions(data.subscriptions || []);
+      setPayments(data.payments || []);
       setAuthorized(true);
     } catch {
       router.push('/dashboard');
@@ -90,6 +104,7 @@ export default function AdminPage() {
       setSupportRequests(data.supportRequests || []);
       setPendingMatches(data.pendingMatches || []);
       setSubscriptions(data.subscriptions || []);
+      setPayments(data.payments || []);
     } catch (err) {
       console.error('Failed to load admin data:', err);
     } finally {
@@ -170,7 +185,14 @@ export default function AdminPage() {
 
       <main className="max-w-6xl mx-auto px-6 py-8">
         {/* Stats */}
-        <div className="grid md:grid-cols-3 gap-4 mb-8">
+        <div className="grid md:grid-cols-4 gap-4 mb-8">
+          <div className="border border-gray-200 p-4 flex items-center gap-4">
+            <span className="text-3xl">💰</span>
+            <div>
+              <p className="text-2xl font-bold">{payments.length}</p>
+              <p className="text-sm text-gray-500">Total Payments</p>
+            </div>
+          </div>
           <div className="border border-gray-200 p-4 flex items-center gap-4">
             <span className="text-3xl">💬</span>
             <div>
@@ -195,8 +217,9 @@ export default function AdminPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 border-b border-gray-200">
+        <div className="flex gap-2 mb-6 border-b border-gray-200 overflow-x-auto">
           {[
+            { id: 'payments', label: 'Payments', count: payments.length },
             { id: 'support', label: 'Support', count: openRequests.length },
             { id: 'pending', label: 'Pending Links', count: pendingLinks.length },
             { id: 'users', label: 'All Users', count: subscriptions.length },
@@ -222,6 +245,42 @@ export default function AdminPage() {
 
         {/* Tab Content */}
         <div className="border border-gray-200">
+          {activeTab === 'payments' && (
+            <div className="divide-y divide-gray-200">
+              {payments.length === 0 ? (
+                <div className="p-8 text-center text-gray-400">No payments yet</div>
+              ) : (
+                payments.map(payment => (
+                  <div key={payment.id} className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                            payment.status === 'completed' ? 'bg-green-100 text-green-700' :
+                            payment.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>
+                            {payment.status.toUpperCase()}
+                          </span>
+                          <span className="font-bold text-lg">${(payment.amount_cents / 100).toFixed(2)}</span>
+                          <span className="text-sm text-gray-400">{formatDate(payment.created_at)}</span>
+                        </div>
+                        <p className="font-medium">{payment.user_name}</p>
+                        <p className="text-sm text-gray-500">
+                          {payment.user_email}
+                          {payment.user_phone && ` • 📱 ${payment.user_phone}`}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1 font-mono">
+                          Tx: {payment.blockchyp_transaction_id}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
           {activeTab === 'support' && (
             <div className="divide-y divide-gray-200">
               {supportRequests.length === 0 ? (
