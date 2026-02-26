@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     let planName = providedPlanName || '1 Month';
 
     // Validate amount is one of our valid plans
-    const validAmounts = [2000, 9000, 15000]; // $20, $90, $150
+    const validAmounts = [2000, 9000, 15000, 39900]; // $20, $90, $150, $399 Lifetime
     if (!amountCents || !validAmounts.includes(amountCents)) {
       console.error('Invalid amount received:', amountCents);
       return NextResponse.json({ error: 'Invalid plan selected' }, { status: 400 });

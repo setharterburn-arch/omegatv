@@ -81,9 +81,16 @@ export async function POST(req: NextRequest) {
 
     const createResult = await createResponse.json();
 
-    // Calculate expiry
-    const expiresAt = new Date();
-    expiresAt.setMonth(expiresAt.getMonth() + planMonths);
+    // Calculate expiry (lifetime = no expiry)
+    const isLifetime = planMonths === 0;
+    const expiresAt = isLifetime ? null : new Date();
+    if (expiresAt) {
+      expiresAt.setMonth(expiresAt.getMonth() + planMonths);
+    }
+
+    // Determine plan name and price
+    const planName = isLifetime ? 'Lifetime Access' : `${planMonths} Month`;
+    const priceCents = isLifetime ? 39900 : planMonths * 2500;
 
     // Save to database
     const { error: dbError } = await adminSupabase
@@ -93,9 +100,9 @@ export async function POST(req: NextRequest) {
         iptv_username: createResult.username,
         iptv_password: createResult.password,
         status: 'active',
-        expires_at: expiresAt.toISOString(),
-        plan_name: `${planMonths} Month`,
-        price_cents: planMonths * 2500,
+        expires_at: expiresAt ? expiresAt.toISOString() : null,
+        plan_name: planName,
+        price_cents: priceCents,
       }, {
         onConflict: 'user_id',
       });

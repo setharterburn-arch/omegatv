@@ -29,6 +29,7 @@ const PLANS: Plan[] = [
   { id: '1mo', name: '1 Month', months: 1, price_cents: 2000, connections: 3 },
   { id: '6mo', name: '6 Months', months: 6, price_cents: 9000, connections: 3, savings: 'Save $30' },
   { id: '12mo', name: '12 Months', months: 12, price_cents: 15000, connections: 3, savings: 'Save $90' },
+  { id: 'lifetime', name: 'Lifetime Access', months: 0, price_cents: 39900, connections: 5, savings: 'Best Value' },
 ];
 
 export default function RenewPage() {
@@ -230,7 +231,7 @@ export default function RenewPage() {
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-semibold">{plan.name}</p>
-                    <p className="text-gray-500 text-sm">{plan.connections} Connections</p>
+                    <p className="text-gray-500 text-sm">{plan.connections} Connections{plan.id === 'lifetime' ? ' (5 TVs)' : ''}</p>
                     {plan.savings && (
                       <p className="text-green-600 text-sm font-medium">{plan.savings}</p>
                     )}
@@ -241,6 +242,9 @@ export default function RenewPage() {
                       <p className="text-gray-400 text-sm">
                         ${(plan.price_cents / 100 / plan.months).toFixed(0)}/mo
                       </p>
+                    )}
+                    {plan.id === 'lifetime' && (
+                      <p className="text-gray-400 text-sm">One-time payment</p>
                     )}
                   </div>
                 </div>

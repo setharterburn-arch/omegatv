@@ -65,15 +65,19 @@ export async function POST(req: NextRequest) {
 
     const renewResult = await renewResponse.json();
 
-    // Update subscription expiry
-    const newExpiry = new Date();
-    newExpiry.setMonth(newExpiry.getMonth() + planMonths);
+    // Update subscription expiry (lifetime = no expiry)
+    const isLifetime = planMonths === 0;
+    const newExpiry = isLifetime ? null : new Date();
+    if (newExpiry) {
+      newExpiry.setMonth(newExpiry.getMonth() + planMonths);
+    }
 
     await adminSupabase
       .from('user_subscriptions')
       .update({
-        expires_at: newExpiry.toISOString(),
+        expires_at: isLifetime ? null : newExpiry!.toISOString(),
         status: 'active',
+        plan_name: isLifetime ? 'Lifetime Access' : `${planMonths} Month`,
         updated_at: new Date().toISOString(),
       })
       .eq('id', subscriptionId);
